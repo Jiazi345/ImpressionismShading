@@ -1,0 +1,31 @@
+#define THREADGROUPSIZE 128
+#pragma kernel LeanGrass1
+
+
+RWTexture2D<float4> Result;
+
+
+struct GrassClump
+{
+    float3 position;
+    float lean;
+    float noise;
+    float fade;
+};
+RWStructuredBuffer<GrassClump> clumpsBuffer;
+float time;
+float maxLean;
+float4 wind;
+float3 deltaPos;
+#include "../../1_Shaders/ShaderTools/NoiseLib.hlsl"
+
+[numthreads(THREADGROUPSIZE,1,1)]
+void LeanGrass1 (uint3 id : SV_DispatchThreadID)
+{
+   //GrassClump clump= clumpsBuffer[id.x];
+
+   // float2 offset=(clump.position.xz+wind.xy*time*wind.z)*wind.w;
+   // float noise=perlinNoise(offset.xy)*2-1;
+   // clump.lean=noise*maxLean*clump.noise;
+   // clumpsBuffer[id.x]=clump;
+}
