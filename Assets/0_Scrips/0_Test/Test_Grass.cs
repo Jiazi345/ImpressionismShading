@@ -33,7 +33,7 @@ using UnityEngine;
         public ComputeShader shader;
         [Range(0, 1)]
         public float density = 0.8f;
-        [Range(0.1f, 3)]
+        [Range(0.1f, 50)]
         public float scale = 0.2f;
         [Range(10, 45)]
         public float maxLean = 25;
@@ -130,7 +130,7 @@ using UnityEngine;
                 return mesh;
             }
         }
-
+        public Mesh StrokePlane;
         void Start()
         {
 //        PlayerTrans = GameObject.Find("Player").transform;
@@ -138,7 +138,8 @@ using UnityEngine;
  //       playerPos1 = PlayerTrans.position;
 
             bounds = new Bounds(Vector3.zero, new Vector3(1200,1200, 1200));
-            blade = Blade;
+            blade = StrokePlane;
+         //   blade = Blade;
         material.enableInstancing = true;
         InitShader();
             
@@ -170,7 +171,7 @@ using UnityEngine;
                 Debug.Log("groupsize" + groupSize);
                 Debug.Log("threadgroupsize" + threadGroupSize);
                Debug.Log("Extends x"+bounds.extents.x);
-               Debug.Log("Extends y"+bounds.extents.y);
+               Debug.Log("Extends z"+bounds.extents.z);
 
             InitPos(count, bounds);
 

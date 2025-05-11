@@ -27,6 +27,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 37a571e2878a9724c9551c88e48feca4, type: 3}
         m_Scale: {x: 0.46, y: 1}
         m_Offset: {x: -0.17, y: 0}
+    - _ColorMap:
+        m_Texture: {fileID: 2800000, guid: 775a92b36fa01c341b327179ee51f9e3, type: 3}
+        m_Scale: {x: 8.37, y: -11.61}
+        m_Offset: {x: -0.34, y: 0}
     m_Ints: []
     m_Floats:
     - _ClipRange: 0.311

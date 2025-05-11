@@ -56,7 +56,7 @@ public class MovementScript : MonoBehaviour
 
 
         float animationSpeedPercent = ((running) ? 0.75f : 0.25f) * inputDir.magnitude;//ͨ����������������״̬�����Ʊ�����ֵ
-        animator.SetFloat("speedPercent", animationSpeedPercent, speedSmoothTime, Time.deltaTime);
+//        animator.SetFloat("speedPercent", animationSpeedPercent, speedSmoothTime, Time.deltaTime);
         //1. ͨ������animator������setfloat���������״̬����speedPercent������ֵ
         //2. ����������ĸ�����, ���������Դ���ƽ������, ����ͨ�������������ֵ��ʵ�ֶ���״̬���Զ�ƽ������
 

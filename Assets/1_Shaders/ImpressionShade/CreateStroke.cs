@@ -115,7 +115,7 @@ public class CreateStroke : MonoBehaviour
             
             Vector3 pos =meshTransform.TransformPoint(ParentMesh.vertices[i]);//world space pos
             Vector3 normal = meshTransform.TransformDirection(ParentMesh.normals[i]);
-            Debug.Log("Scale"+meshTransform.lossyScale);
+//            Debug.Log("Scale"+meshTransform.lossyScale);
             uint mat = (uint)Random.Range(0, MatCount);
             Vector2 uv=ParentMesh.uv[i];
             Vector2 uv2=ParentMesh.uv2[i];

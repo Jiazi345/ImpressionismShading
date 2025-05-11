@@ -171,6 +171,9 @@ Shader "Unlit/strock"
 
              //   OUT.positionHCS = TransformObjectToHClip(rotatedOS);
                 OUT.positionHCS= mul(UNITY_MATRIX_VP, float4(rotatedOS, 1.0));
+                
+                //
+                OUTPUT_LIGHTMAP_UV(stroke.lightmapuv,unity_LightmapST,OUT.lightmapuv);
 
                 //shadow
                 positions = GetVertexPositionInputs(stroke.Position);
@@ -193,28 +196,33 @@ Shader "Unlit/strock"
 
             //    float3 lightMap=SAMPLE_TEXTURE2D(_LightMapColor,sampler_LightMapColor,IN.lightmapuv);
          //       lightMap=KeepHueOnly(lightMap,1,1);
-                float3 lightMap=SAMPLE_TEXTURE2D(unity_Lightmap,samplerunity_Lightmap, IN.lightmapuv);
+              float3 lightMap=SAMPLE_TEXTURE2D(unity_Lightmap,samplerunity_Lightmap, IN.lightmapuv);//Bake light
+             //   float3 lightMap=SAMPLE_TEXTURE2D(unity_Lightmap,samplerunity_Lightmap, IN.uv2);
                 lightMap=KeepHueOnly(lightMap,1,1);
     //      float3 lightMap=SampleSingleLightmap(TEXTURE2D_ARGS(unity_Lightmap,samplerunity_Lightmap), 
          
     //      IN.uv2,half4(1,1,0,0),
     //    false,half4(1,1,1,1));
     //            return half4(IN.uv2,0,1);
-        //      return half4(lightMap,1);
+                // return half4(IN.uv2,1,1);
+                // return half4(IN.lightmapuv,1,1);
+         //    return half4(lightMap,1);
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
 
                 lightMap=SAMPLE_TEXTURE2D(unity_Lightmap,samplerunity_Lightmap,strokes[IN.instanceID].lightmapuv);
                 lightMap=KeepHueOnly(lightMap,0.8,1);
-  
+
+                // return half4(lightMap,1);
+                // return half4(strokes[IN.instanceID].lightmapuv,1,1);
                 IN.Mapuv=atlasUV(IN.Mapuv,strokes[IN.instanceID].matIndex);
                 shape=SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.Mapuv);
                 clip(shape.x-_ClipRange);
 
                 Light light=GetMainLight();
                 half shadow=saturate(dot(IN.normal,light.direction));
-                //明暗交界线参数 明暗交界线为1 远离交界线逐渐退化到为0
+                //dark bright cross line
                 half darklightCross=1-abs(shadow-0.5)*2;
-                half darkSideRange=step(0.5,shadow*shadowAmount);//暗部遮罩
+                half darkSideRange=step(0.5,shadow*shadowAmount);//dark side mask
                 
 
                 InputData inputData;
@@ -225,24 +233,25 @@ Shader "Unlit/strock"
                 
            
            //fresnel
-            float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS); // 摄像机方向
-            float3 normalWS = normalize(strokes[IN.instanceID].Normals); // 世界空间法线
+            float3 viewDir = normalize(_WorldSpaceCameraPos - IN.positionWS); // camera position
+            float3 normalWS = normalize(strokes[IN.instanceID].Normals); // world space normal
             float cosTheta = saturate(dot(viewDir, normalWS));
-            float3 F0 = float3(0.04, 0.04, 0.04); // 通常用于非金属表面
+            float3 F0 = float3(0.04, 0.04, 0.04); // fresnel parameter
 
                 float3 fresnel = F_Schlick(F0, cosTheta);
             
-                //明暗交界线添加环境光
+                //add environment light to dark and light cross line
                 half3 basecolor=lerp(color*_BaseColor,half3(1,1,1),darklightCross*strokes[IN.instanceID].noise);
                 half3 finalbaseColor=lerp(basecolor*(darkSideRange+lightMap),1-2*(1-color)*(1-light.color),darkSideRange);
-                //fresnel添加透光
+                //fresnel add light
                 half3 finalColor=lerp(finalbaseColor,_HideColor.xyz,fresnel.x*strokes[IN.instanceID].noise);
-                //空气透视
+                
 
                 float depth = length(_WorldSpaceCameraPos - IN.positionWS);
                 depth = saturate(depth*0.01)* _FogFactor;
                 finalColor=lerp(finalColor,GI,depth);
             //    return half4(lightMap,1);
+              //  return half4(light.color,1);
                 return half4(finalColor,1);
                 #endif
                 half3 NoInstancingGI=SampleLightmap(IN.lightmapuv,IN.normal);

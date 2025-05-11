@@ -10,9 +10,9 @@
         _ClipRange("Clip",Range(0,1))=0.5
         _SpecularColor ("SpecularColor", Color) = (1,1,1,1)
         _Smoothness ("Smoothness", Range(0,1)) = 0.5
-        _MaxRotate("MaxRotate",Range(0,3))=3
+        _MaxRotate("MaxRotate",Range(0,10))=3
         _ShadowColor("ShadowColor",Color)=(1,1,1,1)
-
+        _InstanceOffestY("InstanceOffsetY",float)=0.5
 
     }
     SubShader
@@ -31,7 +31,7 @@ Cull off
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "../../1_Shaders/ShaderTools/NoiseLib.hlsl"
 //��Ӱ
- //           #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
 
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:setup
@@ -65,11 +65,12 @@ Cull off
             half3 _ShadowColor;
             
             float _Scale;
-            float4x4 _Martix;//����ת����
-            float4x4 _Martix2;//����ת��
+            float4x4 _MartixX;//����ת����
+            float4x4 _MartixY;//����ת��
             float3 _Position;
             float4 wind;
             float _MaxRotate;
+            float _InstanceOffestY;
 
             float _ClipRange;
             CBUFFER_END
@@ -96,6 +97,18 @@ float4x4 RotateAroundY( float theta)
                  -s,0,c,0,
                 0,0,0,1   );  
 }
+float4x4 RotateAroundX(float theta)
+{
+    float c = cos(theta);
+    float s = sin(theta);
+    return float4x4(
+        1,  0,  0,  0,
+        0,  c, -s,  0,
+        0,  s,  c,  0,
+        0,  0,  0,  1
+    );
+}
+
             #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
             struct GrassClump   
             {
@@ -109,11 +122,7 @@ float4x4 RotateAroundY( float theta)
 
             void setup()
             {
-        //        #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-                //GrassClump clump=clumpsBuffer[instanceID];
-                //_Position=clump.position;
-                //_Martix=create_martix(clump.position,clump.lean);
-           //     #endif
+
              }
             
 
@@ -134,17 +143,21 @@ float4x4 RotateAroundY( float theta)
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 GrassClump clump=clumpsBuffer[IN.instanceID];
                 _Position=clump.position;
-                _Martix=RotateAroundY(clump.noise*_MaxRotate*0.5);//ת���� ֻ��z��
+                _MartixX=RotateAroundX(clump.noise*_MaxRotate*0.5);//ת���� ֻ��z��
+                _MartixY=RotateAroundY(clump.noise*_MaxRotate*0.5);//ת���� ֻ��z��
 
-                _Martix2=create_martix(clump.position,clump.lean);
 
-                IN.positionOS.xyz*=_Scale;
-                IN.positionOS.xyz=mul(_Martix,IN.positionOS);
-                float4 rotatedVertex=mul(_Martix2,IN.positionOS);
-//                IN.positionOS.xyz+=_Position;//����ע���ڼ���clump��position֮ǰ���вݵ�positionOS����һ����
-                //���Ǽ��Ϻ������ռ�����
+                 IN.positionOS.xyz=mul(mul(_MartixY,_MartixX),IN.positionOS);
+              
+                 IN.positionOS.xyz*=_Scale;
+                 //shadow
+                VertexPositionInputs positions = GetVertexPositionInputs(_Position);
+                float4 shadowCoordinates = GetShadowCoord(positions);
+                OUT.shadowCoords = shadowCoordinates;
+                
                 IN.positionOS.xyz+=_Position;
-                IN.positionOS=lerp(IN.positionOS,rotatedVertex,IN.uv.y);
+                IN.positionOS.y+=_InstanceOffestY;
+               
 
                 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.positionWS=positionWS;
@@ -153,10 +166,7 @@ float4x4 RotateAroundY( float theta)
                 OUT.instanceID=IN.instanceID;
 OUT.positionOS=IN.positionOS;
 
-//��Ӱ
-                VertexPositionInputs positions = GetVertexPositionInputs(_Position);
-                float4 shadowCoordinates = GetShadowCoord(positions);
-                OUT.shadowCoords = shadowCoordinates;
+
                 #endif
 
                 return OUT;
@@ -164,33 +174,28 @@ OUT.positionOS=IN.positionOS;
 
             half4 frag(Varyings IN) : SV_Target
             {
+
+    half mask = SAMPLE_TEXTURE2D(_AlphaMap, sampler_AlphaMap, IN.uv).r;
+               clip(mask-_ClipRange);
+
+               half3 GrassColor=lerp(_BaseColor,_BotomColor,IN.uv.y);
+                half shadowAmount = MainLightRealtimeShadow(IN.shadowCoords);
 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-return half4(0,0,0,0);
+               GrassClump clump=clumpsBuffer[IN.instanceID];
+               GrassColor=lerp(GrassColor,_DryColor,clump.fade);
+
 #endif
-return half4(1,1,1,1);
-//     half mask = SAMPLE_TEXTURE2D(_AlphaMap, sampler_AlphaMap, IN.uv).r;
-//                clip(mask-_ClipRange);
+               Light light = GetMainLight();
+               half3 lightColor = light.color * light.distanceAttenuation;
+               half smoothness = exp2(10 * _Smoothness + 1);
+               half3 normalWS = normalize(IN.normalWS);
+               half3 viewWS =  SafeNormalize(IN.viewWS);
 
-//                half3 GrassColor=lerp(_BaseColor,_BotomColor,IN.uv.y);
-//#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-//                GrassClump clump=clumpsBuffer[IN.instanceID];
-//                GrassColor=lerp(GrassColor,_DryColor,clump.fade);
-//#endif
-//                Light light = GetMainLight();
-//                half3 lightColor = light.color * light.distanceAttenuation;
-//                half smoothness = exp2(10 * _Smoothness + 1);
-//                half3 normalWS = normalize(IN.normalWS);
-//                half3 viewWS =  SafeNormalize(IN.viewWS);
-
-//                half shadowAmount = MainLightRealtimeShadow(IN.shadowCoords);
-//                //half3 specularColor = LightingSpecular(lightColor, light.direction, normalWS, viewWS, _SpecularColor, smoothness);
-//                //half3 diffuseColor = LightingLambert(lightColor,light.direction,normalWS) * GrassColor;
-//                //half3 ambientColor = unity_AmbientSky.rgb * _BaseColor;
-//                half3 totalColor = lerp((_ShadowColor+shadowAmount)*GrassColor,GrassColor,shadowAmount); 
+              
+               half3 totalColor = lerp((_ShadowColor+shadowAmount)*GrassColor,GrassColor,shadowAmount); 
                 
-//              //  return half4(IN.uv.x,IN.uv.y,0,1);
-//                return float4((IN.instanceID % 5) * 0.2, 1, 0, 1);
-               // return half4(totalColor,1);
+          
+               return half4(totalColor,1);
             }
 
             ENDHLSL

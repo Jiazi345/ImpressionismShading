@@ -79,8 +79,10 @@ Shader "Custom/ToonWithFog"
              
 
                 float4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+                
                 float lit = step(_ShadowThreshold, albedo.x*lightDot);
-                float3 color = clamp(albedo.r,0.8,1) * ((lit+_FogColor));
+                float3 shadowAmount = clamp(albedo.r,0.8,1) * ((lit+_FogColor));
+                float3 color=lerp(_BaseColor,_BaseColor2,albedo.x);
 
                 // Compute fog factor based on linear depth
            //     float depth = IN.positionHCS.z / IN.positionHCS.w;
@@ -88,6 +90,7 @@ Shader "Custom/ToonWithFog"
             //    float fogFactor = saturate((linearDepth - _FogStart) / (_FogEnd - _FogStart));
 
                 float3 finalColor = lerp(color, _FogColor.rgb, (1-saturate(IN.positionWS.y))*_FogPara+_fogMove);
+                finalColor=lerp(finalColor,mainLight.color,shadowAmount);
 
                 return float4(finalColor, 1.0);
             }
